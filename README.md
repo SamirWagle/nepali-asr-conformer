@@ -1,38 +1,29 @@
 # Nepali ASR Conformer
 
-> A focused workspace for building, training, and evaluating Conformer-based automatic speech recognition models for Nepali speech.
+> A simple Nepali speech-to-text CLI powered by AI4Bharat's multilingual Indic Conformer model.
 
-[![Project Status](https://img.shields.io/badge/status-scaffold-orange)](#project-status)
+[![Project Status](https://img.shields.io/badge/status-inference%20script-success)](#project-status)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](#setup)
-[![Task](https://img.shields.io/badge/task-automatic%20speech%20recognition-success)](#overview)
+[![Model](https://img.shields.io/badge/model-AI4Bharat%20Indic%20Conformer-orange)](#model)
+[![Task](https://img.shields.io/badge/task-speech%20to%20text-success)](#overview)
 
 ## Overview
 
-`nepali-asr-conformer` is intended to become a clean, reproducible ASR pipeline for Nepali speech recognition. The project centers on a Conformer architecture, a modern neural network design that combines convolutional modules with self-attention to capture both local acoustic patterns and long-range speech context.
+`nepali-asr-conformer` is a lightweight Python script for transcribing Nepali audio using the pretrained [`ai4bharat/indic-conformer-600m-multilingual`](https://huggingface.co/ai4bharat/indic-conformer-600m-multilingual) model from Hugging Face.
 
-The goal is to support the full ASR workflow:
+The current implementation focuses on inference:
 
-- Prepare Nepali speech datasets and transcripts
-- Normalize Devanagari text consistently
-- Train a Conformer-based acoustic model
-- Evaluate recognition quality with WER and CER
-- Run inference on Nepali audio files
-- Keep experiments reproducible and easy to compare
-
-## Why Conformer for Nepali ASR?
-
-Nepali speech recognition benefits from models that can handle varied speakers, accents, recording conditions, and sentence lengths. Conformer models are a strong fit because they combine:
-
-- **Self-attention** for broader linguistic and acoustic context
-- **Convolutions** for local phonetic and spectral patterns
-- **Feed-forward layers** for expressive sequence modeling
-- **Efficient sequence learning** for end-to-end ASR pipelines
+- Loads an audio file from disk
+- Converts stereo audio to mono
+- Resamples audio to 16 kHz
+- Automatically uses CUDA when available
+- Loads the AI4Bharat Indic Conformer model
+- Runs ASR with Nepali as the default language
+- Prints the transcription in the terminal
 
 ## Project Status
 
-This repository is currently an early scaffold.
-
-The existing codebase contains:
+This repository currently contains a single-file inference script.
 
 ```text
 .
@@ -41,20 +32,40 @@ The existing codebase contains:
 `-- README.md
 ```
 
-The main Python file is present as a starting point, but the training, evaluation, and inference pipeline has not been implemented yet.
+Implemented:
 
-## Planned Features
+- Audio loading with `soundfile`
+- Stereo-to-mono conversion
+- 16 kHz resampling with `librosa`
+- Model loading through `transformers.AutoModel`
+- GPU/CPU device selection with PyTorch
+- CLI arguments for audio path and language code
 
-- Dataset manifest generation for audio/transcript pairs
-- Audio loading, resampling, and feature extraction
-- Nepali text normalization for Devanagari transcripts
-- Vocabulary or tokenizer preparation
-- Conformer encoder model implementation
-- CTC-based training loop
-- Checkpoint saving and loading
-- Evaluation with word error rate and character error rate
-- Single-file and batch inference
-- Experiment configuration for repeatable training runs
+Not implemented yet:
+
+- Training or fine-tuning
+- Batch transcription
+- Dataset preparation
+- WER/CER evaluation
+- Transcript export to file
+- Tests
+- Dependency lock file
+
+## Model
+
+The script uses:
+
+```python
+ai4bharat/indic-conformer-600m-multilingual
+```
+
+This is loaded with:
+
+```python
+AutoModel.from_pretrained(model_name, trust_remote_code=True)
+```
+
+Because `trust_remote_code=True` is enabled, Hugging Face may execute model-specific Python code from the model repository. Use this only with model sources you trust.
 
 ## Setup
 
@@ -65,130 +76,141 @@ git clone https://github.com/SamirWagle/nepali-asr-conformer.git
 cd nepali-asr-conformer
 ```
 
-Create and activate a virtual environment:
+Create a virtual environment:
 
 ```bash
 python -m venv .venv
 ```
 
-On Windows:
+Activate it on Windows:
 
 ```bash
 .venv\Scripts\activate
 ```
 
-On macOS or Linux:
+Activate it on macOS or Linux:
 
 ```bash
 source .venv/bin/activate
 ```
 
-Install dependencies after a `requirements.txt` or `pyproject.toml` is added:
+Install the required packages:
 
 ```bash
-pip install -r requirements.txt
+pip install torch transformers librosa soundfile
 ```
 
-## Expected Data Format
+The first run may take time because the pretrained model needs to be downloaded from Hugging Face.
 
-The pipeline should eventually work with a manifest-style dataset format where each row points to an audio file and its transcript.
+## Usage
 
-Example:
-
-```csv
-audio_path,transcript
-data/wavs/sample_001.wav,नमस्ते तपाईंलाई कस्तो छ
-data/wavs/sample_002.wav,म नेपाली भाषा बोल्छु
-```
-
-Recommended transcript conventions:
-
-- Store text as UTF-8
-- Normalize Unicode consistently
-- Keep a clear policy for punctuation
-- Keep a clear policy for numerals
-- Avoid mixing Nepali and English text unless code-switching is part of the task
-- Track train, validation, and test splits explicitly
-
-## Intended Workflow
-
-Once implemented, the project should follow a workflow like this:
+Run Nepali ASR on a WAV file:
 
 ```bash
-# 1. Prepare manifests
-python nepali-asr-conformer.py prepare-data --data-dir data/raw --out-dir data/manifests
-
-# 2. Train the model
-python nepali-asr-conformer.py train --config configs/conformer.yaml
-
-# 3. Evaluate a checkpoint
-python nepali-asr-conformer.py evaluate --checkpoint checkpoints/best.pt --manifest data/manifests/test.csv
-
-# 4. Transcribe audio
-python nepali-asr-conformer.py transcribe --checkpoint checkpoints/best.pt --audio path/to/audio.wav
+python nepali-asr-conformer.py --audio path/to/audio.wav
 ```
 
-These commands describe the target interface and may change as the implementation takes shape.
+Nepali is the default language:
 
-## Evaluation Metrics
+```bash
+python nepali-asr-conformer.py --audio path/to/audio.wav --lang ne
+```
 
-The core metrics should be:
-
-- **WER**: Word Error Rate
-- **CER**: Character Error Rate
-
-CER is especially useful for Nepali ASR because it gives a more detailed view of Devanagari character-level recognition quality.
-
-## Suggested Repository Structure
-
-As the project grows, a maintainable layout could look like this:
+Example output:
 
 ```text
-.
-|-- configs/
-|   `-- conformer.yaml
-|-- data/
-|   |-- manifests/
-|   `-- raw/
-|-- notebooks/
-|-- src/
-|   `-- nepali_asr_conformer/
-|       |-- data/
-|       |-- models/
-|       |-- training/
-|       |-- evaluation/
-|       `-- inference/
-|-- tests/
-|-- requirements.txt
-`-- README.md
+Using device: cuda
+Loading AI4Bharat Conformer model...
+Loading audio: samples/nepali.wav
+Running ASR for language: ne
+
+===== TRANSCRIPTION =====
+नमस्ते तपाईंलाई कस्तो छ
+=========================
 ```
+
+## CLI Arguments
+
+| Argument | Default | Required | Description |
+| --- | --- | --- | --- |
+| `--audio` | none | yes | Path to the input WAV audio file |
+| `--lang` | `ne` | no | Language code passed to the model |
+
+## Audio Notes
+
+For best results, use clear speech audio with minimal background noise.
+
+Recommended input:
+
+- WAV format
+- Single speaker when possible
+- 16 kHz sample rate preferred
+- Mono preferred
+
+The script can still handle non-16 kHz audio by resampling it to 16 kHz. If the audio has multiple channels, it averages them into a single mono channel before inference.
+
+## How It Works
+
+The script follows this flow:
+
+```text
+audio file
+  -> load with soundfile
+  -> convert to mono if needed
+  -> resample to 16 kHz
+  -> convert to PyTorch tensor
+  -> run AI4Bharat Indic Conformer
+  -> print transcription
+```
+
+Core code path:
+
+```python
+audio = load_audio(args.audio)
+audio_tensor = torch.tensor(audio, dtype=torch.float32).unsqueeze(0).to(device)
+transcription = model(audio_tensor, lang=args.lang)
+```
+
+## Troubleshooting
+
+If dependencies are missing, reinstall them:
+
+```bash
+pip install torch transformers librosa soundfile
+```
+
+If model loading is slow, wait for the first download to finish. Later runs should use the cached model.
+
+If CUDA runs out of memory, run on CPU or close other GPU-heavy applications.
+
+If audio loading fails, check that the file path is correct and that the audio format is readable by `soundfile`.
 
 ## Roadmap
 
-- [ ] Add dependency management
-- [ ] Define dataset manifest format
-- [ ] Implement Nepali text normalization
-- [ ] Add audio preprocessing utilities
-- [ ] Implement tokenizer or vocabulary builder
-- [ ] Build Conformer model module
-- [ ] Add CTC loss training loop
-- [ ] Add validation and checkpointing
-- [ ] Add WER and CER evaluation
-- [ ] Add inference CLI
-- [ ] Add tests for preprocessing and metrics
+- [ ] Add `requirements.txt`
+- [ ] Add better error messages for missing files and invalid audio
+- [ ] Add batch transcription for folders of audio
+- [ ] Add transcript export to `.txt` or `.csv`
+- [ ] Add WER and CER evaluation scripts
+- [ ] Add sample audio instructions
+- [ ] Add tests for audio preprocessing
+- [ ] Package the script as a cleaner CLI
+- [ ] Add optional fine-tuning support
 
-## Contributing
+## Suggested GitHub Topics
 
-Contributions are welcome once the initial implementation is in place. Useful areas include:
-
-- Nepali text normalization rules
-- Dataset preparation scripts
-- Model architecture improvements
-- Training stability improvements
-- Evaluation tooling
-- Documentation and examples
-
-Before opening a pull request, keep changes focused and include a short explanation of what changed and how it was tested.
+```text
+nepali-asr
+automatic-speech-recognition
+speech-recognition
+nepali-language
+conformer
+deep-learning
+pytorch
+ctc
+speech-to-text
+devanagari
+```
 
 ## License
 
